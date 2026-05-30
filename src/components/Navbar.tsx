@@ -6,6 +6,7 @@ import BrandLogo from "@/components/BrandLogo";
 const NAV_LINKS = [
   { href: "/", label: "Live" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/guides", label: "Guides" },
   { href: "/multiview", label: "Multi-View" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },

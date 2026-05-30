@@ -6,8 +6,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "SportUnlocked - Watch Live Sports",
-  description: "Unlock live sports streams from around the world. Football, Basketball, Tennis, F1 and more.",
+  title: "SportUnlocked - Sports Schedule, Event Guide, and Live Match Tracker",
+  description: "Browse sports schedules, live event listings, start times, categories, and event availability across football, basketball, tennis, motor sports, cricket, rugby, and more.",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "SportUnlocked" },
   icons: {

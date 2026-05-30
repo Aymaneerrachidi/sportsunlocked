@@ -17,13 +17,21 @@ export default function TermsPage() {
       <h2>Use Of The Site</h2>
       <p>
         SportUnlocked is provided for sports event discovery, schedule browsing, and availability information. You agree
-        to use the site lawfully and responsibly.
+        to use the site lawfully and responsibly. You may not use the site to infringe intellectual property rights,
+        bypass access controls, or distribute unauthorized copies of protected content.
       </p>
 
       <h2>Third-Party Sources</h2>
       <p>
         The site may link to or embed third-party sources. SportUnlocked does not control third-party services and is not
         responsible for their availability, content, advertising, or behavior.
+      </p>
+
+      <h2>No Hosting Of Broadcasts</h2>
+      <p>
+        SportUnlocked does not host, upload, store, or sell sports broadcasts. The site organizes schedule information
+        and source availability. Third-party materials remain the responsibility of their respective services and rights
+        holders.
       </p>
 
       <h2>Intellectual Property</h2>

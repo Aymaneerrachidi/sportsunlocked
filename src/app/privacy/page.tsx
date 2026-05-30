@@ -43,7 +43,8 @@ export default function PrivacyPage() {
       <h2>Third-Party Content</h2>
       <p>
         Some pages may include third-party embedded content or links. Third-party services may process information under
-        their own privacy policies.
+        their own privacy policies. SportUnlocked does not control the cookies, ads, or tracking technologies used by
+        third-party embedded services.
       </p>
 
       <h2>Contact</h2>

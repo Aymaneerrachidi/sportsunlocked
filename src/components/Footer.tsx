@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 const LINKS = [
+  { href: "/guides", label: "Guides" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact" },
   { href: "/privacy", label: "Privacy Policy" },
@@ -12,7 +13,7 @@ export default function Footer() {
     <footer className="site-footer">
       <div>
         <strong>SportUnlocked</strong>
-        <span>Sports schedules, live event discovery, and stream availability in one place.</span>
+        <span>Sports schedules, live event discovery, guides, and viewing tools in one place.</span>
       </div>
       <nav aria-label="Footer navigation">
         {LINKS.map(link => (
