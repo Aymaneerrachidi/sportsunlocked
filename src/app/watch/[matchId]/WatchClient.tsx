@@ -4,7 +4,9 @@ import AdBanner from "@/components/AdBanner";
 import LiveScore from "@/components/LiveScore";
 import WatchLogger from "@/components/WatchLogger";
 import Link from "next/link";
-import { getDefaultThumbnail } from "@/lib/streamFallbacks";
+function getDefaultThumbnail(sport: string): string {
+  return `/thumbnails/${sport.toLowerCase()}.jpg`;
+}
 
 const SPORT_COLORS: Record<string, string> = {
   Football: "var(--sport-football)", Basketball: "var(--sport-basketball)",
