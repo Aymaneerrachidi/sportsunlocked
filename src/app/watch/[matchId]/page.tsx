@@ -1,253 +1,124 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { notFound } from "next/navigation";
-import WatchClient from "./WatchClient";
-import { fetchStreamedStreamUrls, fetchStreamedMatchByTeams } from "@/lib/streamedSports";
-import { findDLHDEmbedByTeams } from "@/lib/daddyLive";
-import { findSportSRCEmbedByTeams, fetchSportSRCStreamById } from "@/lib/sportSRC";
-import { isEffectivelyLive } from "@/lib/liveStatus";
-import { filterAvailableStreams } from "@/lib/streamAvailability";
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { decodeSources, StreamedStream } from "@/lib/streamed";
 
-export const dynamic = "force-dynamic";
-
-type SessionUser = { isPremium?: boolean; isAdmin?: boolean };
-type ProviderFrame = {
-  url?: string;
-  server?: string;
-  title?: string;
-  match?: string;
-  court?: string;
-};
-type ProviderMatch = {
-  tag?: string;
-  slug?: string;
-  kickoff?: string;
-  endTime?: string;
-  league?: string;
-  poster?: string | null;
-  iframes?: ProviderFrame[];
-};
-
-/** Last-name fallback: "Charlie Edwards" → "edwards" */
-function lastName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  return (parts[parts.length - 1] ?? name).toLowerCase();
+interface LoadedStream extends StreamedStream {
+  sourceName: string;
 }
 
-function tagMatchesTeams(tag: string, aLow: string, bLow: string): boolean {
-  const t = tag.toLowerCase();
-  if (t.includes(aLow) && t.includes(bLow)) return true;
-  const aLast = lastName(aLow);
-  const bLast = lastName(bLow);
-  if (aLast.length >= 4 && bLast.length >= 4 && t.includes(aLast) && t.includes(bLast)) return true;
-  return false;
-}
+export default function WatchPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const matchId = params.matchId as string;
+  const sources = decodeSources(searchParams.get("s") ?? "");
 
-function appendUnique(
-  embedUrls: string[],
-  streamLabels: string[],
-  newUrls: string[],
-  newLabels: string[]
-) {
-  for (let i = 0; i < newUrls.length; i++) {
-    if (newUrls[i] && !embedUrls.includes(newUrls[i])) {
-      embedUrls.push(newUrls[i]);
-      streamLabels.push(newLabels[i] ?? `S${embedUrls.length}`);
+  const [streams, setStreams] = useState<LoadedStream[]>([]);
+  const [active, setActive] = useState<LoadedStream | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadStreams = useCallback(async () => {
+    if (sources.length === 0) {
+      setError("No stream sources for this match.");
+      setLoading(false);
+      return;
     }
-  }
-}
+    setLoading(true);
+    setError(null);
 
-export default async function WatchPage({ params }: { params: Promise<{ matchId: string }> }) {
-  const { matchId } = await params;
-  const session = await getServerSession(authOptions);
-  const user = session?.user as SessionUser | undefined;
-  const isPremium = user?.isPremium ?? false;
-  const isAdmin = user?.isAdmin ?? false;
+    const results: LoadedStream[] = [];
+    await Promise.allSettled(
+      sources.map(async ({ source, id }) => {
+        try {
+          const res = await fetch(`/api/stream/${source}/${id}`);
+          if (!res.ok) return;
+          const data: StreamedStream[] = await res.json();
+          results.push(...data.map(s => ({ ...s, sourceName: source })));
+        } catch { /* skip failed source */ }
+      })
+    );
 
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: { channel: true },
-  });
-  if (!match) notFound();
+    if (results.length === 0) {
+      setError("No streams available right now. Try again in a moment.");
+      setLoading(false);
+      return;
+    }
 
-  // Self-heal: if the match should be live but DB hasn't caught up, fix it now
-  if (!match.isLive && match.status !== "finished") {
-    const shouldBeLive = isEffectivelyLive({
-      sport: match.sport,
-      startTime: match.startTime,
-      title: match.title,
-      competition: match.competition,
+    // HD first, then by streamNo
+    results.sort((a, b) => {
+      if (a.hd && !b.hd) return -1;
+      if (!a.hd && b.hd) return 1;
+      return a.streamNo - b.streamNo;
     });
-    if (shouldBeLive) {
-      await prisma.match.update({
-        where: { id: matchId },
-        data: { isLive: true, status: "live" },
-      });
-      match.isLive = true;
-      (match as typeof match & { status: string }).status = "live";
-    }
-  }
 
-  const related = await prisma.match.findMany({
-    where: { id: { not: matchId }, isLive: { not: false } },
-    orderBy: [{ isLive: "desc" }, { startTime: "asc" }],
-    take: 5,
-  });
+    setStreams(results);
+    setActive(results[0]);
+    setLoading(false);
+  }, [matchId, searchParams.get("s")]);
 
-  const relatedFull = related.length >= 3 ? related : await prisma.match.findMany({
-    where: { id: { not: matchId } },
-    orderBy: [{ isLive: "desc" }, { startTime: "asc" }],
-    take: 5,
-  });
-
-  let embedUrls: string[] = [];
-  let streamLabels: string[] = [];
-
-  // externalId format for streamed.st: streamed-{category}-{source}-{sourceId}
-  // All known categories are single words — parse by splitting on "-" at index 1 and 2.
-  const isStreamed = match.externalId?.startsWith("streamed-") ?? false;
-
-  // ── Providers run in parallel ─────────────────────────────────────────────
-  // 1. EmbedSportex  — primary, match-specific
-  // 2. streamed.st/su — direct source/id + team-name search, all sources
-  // 3. DaddyLiveHD   — schedule-based, dlhd.so
-  // 4. SportSRC      — free JSON API, sportsrc.org
-  const [sportexResult, streamedResult, dlhdResult, sportSRCResult] = await Promise.allSettled([
-    // EmbedSportex — always search (by exact slug for sportex-*, by team names for all others)
-    (async () => {
-      const res = await fetch("https://api.embedsportex.site/api/streams", {
-        cache: "no-store",
-        headers: { "User-Agent": "Mozilla/5.0" },
-      });
-      if (!res.ok) return null;
-      const data = (await res.json()) as Record<string, unknown>;
-      const aLow = match.teamA.toLowerCase();
-      const bLow = match.teamB.toLowerCase();
-      const slug = match.externalId?.startsWith("sportex-")
-        ? match.externalId.replace("sportex-", "")
-        : null;
-      for (const matches of Object.values(data)) {
-        if (!Array.isArray(matches)) continue;
-        const found = (matches as ProviderMatch[]).find((m) => {
-          if (!m.iframes?.length) return false;
-          if (slug) return m.slug === slug;
-          const tag = m.tag ?? "";
-          return tag.length > 0 && tagMatchesTeams(tag, aLow, bLow);
-        });
-        if (found?.iframes?.length) {
-          const frames = found.iframes.filter(
-            (f): f is ProviderFrame & { url: string } => Boolean(f.url)
-          );
-          return {
-            embedUrls: frames.map((f) => f.url),
-            streamLabels: frames.map(
-              (f, i) => f.title || f.match || f.court || f.server || `S${i + 1}`
-            ),
-          };
-        }
-      }
-      return null;
-    })(),
-
-    // streamed.st / DLHD / SportSRC — direct fetch by stored id, then team-name fallback
-    (async () => {
-      const exId = match.externalId ?? "";
-
-      // DaddyLiveHD: embed URL is deterministic from channelId
-      if (exId.startsWith("dlhd-")) {
-        const channelId = exId.replace("dlhd-", "");
-        return { embedUrls: [`https://dlhd.so/stream/stream-${channelId}.php`], streamLabels: ["DLHD"] };
-      }
-
-      // SportSRC: re-fetch streams by stored event id
-      if (exId.startsWith("sportsrc-")) {
-        const eventId = exId.replace("sportsrc-", "");
-        const direct = await fetchSportSRCStreamById(eventId).catch(() => null);
-        if (direct) return direct;
-      }
-
-      // streamed.st: try stored source/id first
-      if (isStreamed) {
-        const parts = exId.split("-");
-        if (parts.length >= 4) {
-          const source = parts[2];
-          const sourceId = parts.slice(3).join("-");
-          if (source && sourceId) {
-            const direct = await fetchStreamedStreamUrls(source, sourceId).catch(() => null);
-            if (direct) return direct;
-          }
-        }
-      }
-
-      // Team-name search: tries ALL sources across all sport categories
-      return await fetchStreamedMatchByTeams(match.sport, match.teamA, match.teamB).catch(() => null);
-    })(),
-
-    // DaddyLiveHD — schedule-based, dlhd.so
-    findDLHDEmbedByTeams(match.teamA, match.teamB)
-      .then((url) => (url ? { embedUrls: [url], streamLabels: ["DLHD"] } : null))
-      .catch(() => null),
-
-    // SportSRC — free unlimited JSON API
-    findSportSRCEmbedByTeams(match.teamA, match.teamB).catch(() => null),
-  ]);
-
-  // ── Merge EmbedSportex (primary for all match types) ────────────────────
-  if (sportexResult.status === "fulfilled" && sportexResult.value) {
-    appendUnique(embedUrls, streamLabels, sportexResult.value.embedUrls, sportexResult.value.streamLabels);
-  }
-
-  // ── Always append streamed.st as additional servers ───────────────────────
-  if (streamedResult.status === "fulfilled" && streamedResult.value) {
-    appendUnique(embedUrls, streamLabels, streamedResult.value.embedUrls, streamedResult.value.streamLabels);
-  }
-
-  // ── Always append DaddyLiveHD as additional server ────────────────────────
-  if (dlhdResult.status === "fulfilled" && dlhdResult.value) {
-    appendUnique(embedUrls, streamLabels, dlhdResult.value.embedUrls, dlhdResult.value.streamLabels);
-  }
-
-  // ── Always append SportSRC as additional server ───────────────────────────
-  if (sportSRCResult.status === "fulfilled" && sportSRCResult.value) {
-    appendUnique(embedUrls, streamLabels, sportSRCResult.value.embedUrls, sportSRCResult.value.streamLabels);
-  }
-
-  // ── Last resort: use cached DB embed URLs ─────────────────────────────────
-  if (embedUrls.length === 0 && match.embedUrl) {
-    embedUrls.push(match.embedUrl);
-    streamLabels.push("Main");
-  }
-  if (match.stream1 && !embedUrls.includes(match.stream1)) {
-    embedUrls.push(match.stream1);
-    streamLabels.push("S1");
-  }
-  if (match.stream2 && !embedUrls.includes(match.stream2)) {
-    embedUrls.push(match.stream2);
-    streamLabels.push("S2");
-  }
-  if (match.stream3 && !embedUrls.includes(match.stream3)) {
-    embedUrls.push(match.stream3);
-    streamLabels.push("S3");
-  }
-
-  const availableStreams = await filterAvailableStreams({ embedUrls, streamLabels });
-  embedUrls = availableStreams.embedUrls;
-  streamLabels = availableStreams.streamLabels;
+  useEffect(() => { loadStreams(); }, [loadStreams]);
 
   return (
-    <WatchClient
-      match={{
-        ...match,
-        startTime: match.startTime.toISOString(),
-        channelUrl: match.channel?.url ?? null,
-        channelId: match.channelId,
-        embedUrls,
-        streamLabels,
-        externalId: match.externalId,
-      }}
-      related={relatedFull.map(r => ({ ...r, startTime: r.startTime.toISOString() }))}
-      isPremium={isPremium || isAdmin}
-    />
+    <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px" }}>
+      {/* Player */}
+      <div style={{
+        position: "relative", width: "100%", paddingBottom: "56.25%",
+        background: "#000", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 16,
+      }}>
+        {loading && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              Loading stream…
+            </span>
+          </div>
+        )}
+        {!loading && error && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--live)", letterSpacing: "0.06em" }}>{error}</span>
+            <button onClick={loadStreams} style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", background: "var(--accent)", color: "#060A12", border: "none", borderRadius: "var(--radius-sm)", padding: "8px 20px", cursor: "pointer" }}>
+              Retry
+            </button>
+          </div>
+        )}
+        {active && (
+          <iframe
+            key={active.id}
+            src={active.embedUrl}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
+            allowFullScreen
+            allow="autoplay; fullscreen; encrypted-media"
+          />
+        )}
+      </div>
+
+      {/* Stream selector */}
+      {streams.length > 1 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+          {streams.map(stream => (
+            <button
+              key={stream.id}
+              onClick={() => setActive(stream)}
+              style={{
+                fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                padding: "6px 14px", borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--border)",
+                background: active?.id === stream.id ? "var(--accent)" : "var(--surface)",
+                color: active?.id === stream.id ? "#060A12" : "var(--text-muted)",
+                cursor: "pointer", transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              {stream.sourceName} {stream.streamNo} · {stream.hd ? "HD" : "SD"}{stream.language !== "English" ? ` · ${stream.language}` : ""}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Back link */}
+      <a href="/" style={{ fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", textDecoration: "none" }}>
+        ← Back to matches
+      </a>
+    </div>
   );
 }
