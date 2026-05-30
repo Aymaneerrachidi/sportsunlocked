@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="flex-1" style={{ position: "relative", zIndex: 1 }}>
           {children}
         </main>
+        <Analytics />
       </body>
     </html>
   );

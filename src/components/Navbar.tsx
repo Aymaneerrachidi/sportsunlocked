@@ -30,7 +30,7 @@ export default function Navbar() {
         alignItems: "center",
         gap: 24,
       }}>
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, transform: "translateY(6px)" }}>
           <BrandLogo size="sm" collapseOnMobile />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
