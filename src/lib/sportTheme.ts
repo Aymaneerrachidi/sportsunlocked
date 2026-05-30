@@ -1,19 +1,24 @@
 export const SPORT_COLORS: Record<string, string> = {
-  Football: "var(--sport-football)",
-  Basketball: "var(--sport-basketball)",
-  Tennis: "var(--sport-tennis)",
-  F1: "var(--sport-f1)",
-  Cricket: "var(--sport-cricket)",
-  Rugby: "var(--sport-rugby)",
-  Baseball: "var(--sport-baseball)",
-  Boxing: "var(--sport-boxing)",
-  "Ice Hockey": "var(--sport-hockey)",
-  Golf: "var(--sport-golf)",
-  MotoSports: "#F59E0B",
-  Motorcycle: "#F59E0B",
-  Other: "var(--sport-other)",
+  // Streamed API lowercase categories
+  football:         "var(--sport-football)",
+  soccer:           "var(--sport-football)",
+  basketball:       "var(--sport-basketball)",
+  tennis:           "var(--sport-tennis)",
+  hockey:           "var(--sport-hockey)",
+  boxing:           "var(--sport-boxing)",
+  mma:              "var(--sport-boxing)",
+  fight:            "var(--sport-boxing)",
+  cricket:          "var(--sport-cricket)",
+  rugby:            "var(--sport-rugby)",
+  baseball:         "var(--sport-baseball)",
+  golf:             "#22c55e",
+  motorsports:      "#F59E0B",
+  amfootball:       "#F97316",
+  darts:            "#a78bfa",
+  afl:              "#F59E0B",
+  other:            "var(--sport-other)",
 };
 
-export function sportColor(sport: string) {
-  return SPORT_COLORS[sport] ?? "var(--sport-other)";
+export function sportColor(category: string): string {
+  return SPORT_COLORS[category.toLowerCase()] ?? "var(--sport-other)";
 }
