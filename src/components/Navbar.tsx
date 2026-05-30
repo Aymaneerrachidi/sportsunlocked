@@ -7,6 +7,8 @@ const NAV_LINKS = [
   { href: "/", label: "Live" },
   { href: "/schedule", label: "Schedule" },
   { href: "/multiview", label: "Multi-View" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export default function Navbar() {
@@ -25,15 +27,16 @@ export default function Navbar() {
         maxWidth: 1280,
         margin: "0 auto",
         padding: "0 24px",
-        height: 64,
+        minHeight: 64,
         display: "flex",
         alignItems: "center",
         gap: 24,
+        flexWrap: "wrap",
       }}>
         <div style={{ flexShrink: 0, transform: "translateY(6px)" }}>
           <BrandLogo size="sm" collapseOnMobile />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap", padding: "8px 0" }}>
           {NAV_LINKS.map(({ href, label }) => {
             const active = pathname === href;
             return (
