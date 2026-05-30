@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "contact@sportunlocked.example";
+const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "contact@sportunlocked.xyz";
 
 export const metadata: Metadata = {
   title: "Contact - SportUnlocked",
