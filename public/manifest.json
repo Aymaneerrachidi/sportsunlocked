@@ -1,0 +1,13 @@
+{
+  "name": "SportUnlocked",
+  "short_name": "SportUnlocked",
+  "description": "Unlock live sports streams - football, basketball, tennis, F1 and more",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060A12",
+  "theme_color": "#F59E0B",
+  "orientation": "any",
+  "icons": [
+    { "src": "/logo.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}

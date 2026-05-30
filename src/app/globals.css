@@ -1,26 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:            #060A12;
+  --surface:       #0C1220;
+  --card:          #101828;
+  --card-hover:    #16202F;
+  --border:        #1C2B40;
+  --border-bright: #274060;
+
+  --accent:        #F59E0B;
+  --accent-dim:    rgba(245,158,11,0.15);
+  --accent-glow:   rgba(245,158,11,0.25);
+
+  --live:          #EF4444;
+  --live-dim:      rgba(239,68,68,0.2);
+
+  --text:          #EEF4FF;
+  --text-muted:    #7A97BF;
+  --text-dim:      #3A526A;
+
+  --sport-football:   #10B981;
+  --sport-basketball: #F97316;
+  --sport-tennis:     #A78BFA;
+  --sport-f1:         #EF4444;
+  --sport-cricket:    #0EA5E9;
+  --sport-rugby:      #F59E0B;
+  --sport-baseball:   #06B6D4;
+  --sport-boxing:     #EC4899;
+  --sport-hockey:     #38BDF8;
+  --sport-golf:       #84CC16;
+  --sport-other:      #94A3B8;
+
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+html { height: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  color: var(--text);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: -20vh;
+  left: -10vw;
+  width: 60vw;
+  height: 60vh;
+  background: radial-gradient(ellipse, rgba(245,158,11,0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--live);
+  border-radius: 50%;
+  animation: live-pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--live);
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .brand-logo--collapse {
+    width: 150px !important;
+    height: 42px !important;
+  }
 }
