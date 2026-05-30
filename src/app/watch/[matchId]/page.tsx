@@ -20,7 +20,7 @@ export default function WatchPage() {
 
   const loadStreams = useCallback(async () => {
     if (sources.length === 0) {
-      setError("No stream sources for this match.");
+      setError("No event sources are listed for this match.");
       setLoading(false);
       return;
     }
@@ -43,7 +43,7 @@ export default function WatchPage() {
     );
 
     if (results.length === 0) {
-      setError("No streams available right now. Try again in a moment.");
+      setError("No playable event source is available right now. Try again in a moment.");
       setLoading(false);
       return;
     }
@@ -80,7 +80,7 @@ export default function WatchPage() {
         {loading && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              Loading stream...
+              Loading event source...
             </span>
           </div>
         )}
@@ -133,7 +133,7 @@ export default function WatchPage() {
       )}
 
       <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", textDecoration: "none" }}>
-        Back to matches
+        Back to schedule
       </Link>
     </div>
   );

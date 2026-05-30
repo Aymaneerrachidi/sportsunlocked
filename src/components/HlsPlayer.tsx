@@ -156,7 +156,7 @@ export default function HlsPlayer({ sources, isLive, isPremium, matchId, channel
           <p className="text-gray-400 text-xs uppercase tracking-widest mb-2">Advertisement</p>
           <div className="w-full max-w-md bg-[#1a1a1a] rounded-xl p-8 border border-[#2a2a2a] mb-4" data-ad-slot="preroll">
             <p className="text-white text-lg font-semibold mb-2">Upgrade to Premium</p>
-            <p className="text-gray-400 text-sm">Watch ad-free with a Premium subscription.</p>
+            <p className="text-gray-400 text-sm">Premium display options can reduce interruptions where supported.</p>
           </div>
           <p className="text-gray-400 text-sm mb-4">
             Stream starts in <span className="text-white font-bold">{prerollCountdown}s</span>

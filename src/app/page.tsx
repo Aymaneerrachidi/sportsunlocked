@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1>Live Event Tracker For Busy Sports Days</h1>
           <p>
             Browse today&apos;s events, compare start times, filter by sport, and plan what to follow next. SportUnlocked
-            organizes live and upcoming sports into a fast schedule-first interface.
+            combines live and upcoming sports listings with original guides for busy sports days.
           </p>
         </div>
         <Link href="/guides">Read Guides</Link>

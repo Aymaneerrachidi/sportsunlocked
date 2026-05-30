@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "SportUnlocked - Sports Schedule, Event Guide, and Live Match Tracker",
-  description: "Browse sports schedules, live event listings, start times, categories, and event availability across football, basketball, tennis, motor sports, cricket, rugby, and more.",
+  description: "Browse sports schedules, live event listings, start times, categories, original sports guides, and event availability across football, basketball, tennis, motor sports, cricket, rugby, and more.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sportunlocked.com"),
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "SportUnlocked" },
   icons: {

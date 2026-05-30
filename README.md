@@ -1,6 +1,6 @@
-# IPTV
+# SportUnlocked
 
-Next.js sports schedule and watch app backed by Streamed.
+Next.js sports schedule, event discovery, and live match tracking app.
 
 ## Run
 
@@ -21,11 +21,12 @@ Leave it empty unless you have a real key. The public test key is intentionally 
 
 ## AdSense Preparation
 
-The app includes public pages for About, Contact, Privacy Policy, Terms, and an optional `/ads.txt` route.
+The app includes public pages for About, Contact, Privacy Policy, Terms, Editorial Policy, Guides, a sitemap, robots.txt, and an optional `/ads.txt` route.
 
 Set these environment variables only after Google gives you real values:
 
 ```env
+NEXT_PUBLIC_SITE_URL="https://your-domain.com"
 NEXT_PUBLIC_ADSENSE_CLIENT="ca-pub-0000000000000000"
 ADSENSE_PUBLISHER_ID="pub-0000000000000000"
 NEXT_PUBLIC_CONTACT_EMAIL="contact@example.com"

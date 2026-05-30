@@ -33,6 +33,11 @@ export default function PrivacyPage() {
         technologies to serve and measure ads. These partners may personalize or limit ads based on their policies and
         your settings.
       </p>
+      <p>
+        Advertising partners may receive technical signals such as your browser, device, approximate location, page URL,
+        and interactions with ads. You can manage personalized advertising through your Google ad settings and browser
+        privacy controls.
+      </p>
 
       <h2>Cookies</h2>
       <p>
@@ -42,9 +47,9 @@ export default function PrivacyPage() {
 
       <h2>Third-Party Content</h2>
       <p>
-        Some pages may include third-party embedded content or links. Third-party services may process information under
-        their own privacy policies. SportUnlocked does not control the cookies, ads, or tracking technologies used by
-        third-party embedded services.
+        Some pages may include third-party embedded content or links related to event availability. Third-party services
+        may process information under their own privacy policies. SportUnlocked does not control the cookies, ads, or
+        tracking technologies used by third-party embedded services.
       </p>
 
       <h2>Contact</h2>

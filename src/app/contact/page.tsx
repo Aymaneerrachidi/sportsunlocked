@@ -4,7 +4,7 @@ const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "contact@sportunlo
 
 export const metadata: Metadata = {
   title: "Contact - SportUnlocked",
-  description: "Contact SportUnlocked for feedback, support, copyright questions, or business inquiries.",
+  description: "Contact SportUnlocked for feedback, corrections, copyright questions, support, or business inquiries.",
 };
 
 export default function ContactPage() {
@@ -13,8 +13,8 @@ export default function ContactPage() {
       <p className="schedule-eyebrow">Contact</p>
       <h1>Get In Touch</h1>
       <p>
-        For feedback, support, partnership questions, copyright concerns, or site issues, contact the SportUnlocked team
-        by email.
+        For feedback, corrections, support, partnership questions, copyright concerns, or site issues, contact the
+        SportUnlocked team by email.
       </p>
       <div className="contact-panel">
         <span>Email</span>
@@ -27,8 +27,8 @@ export default function ContactPage() {
       </p>
       <h2>Site Feedback</h2>
       <p>
-        If a schedule entry, thumbnail, category, or source is incorrect, send us the page URL and a short description
-        of the issue.
+        If a schedule entry, thumbnail, category, start time, or availability signal is incorrect, send us the page URL
+        and a short description of the issue.
       </p>
     </main>
   );

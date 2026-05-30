@@ -105,7 +105,7 @@ export default function MultiViewPage() {
 
     const streams = await loadMatchStreams(match);
     if (streams.length === 0) {
-      setError("No streams available for that match yet.");
+      setError("No playable source is available for that match yet.");
       setLoadingSlot(null);
       return;
     }
@@ -183,7 +183,7 @@ export default function MultiViewPage() {
               ) : (
                 <div className="multiview-empty">
                   <strong>{loadingSlot === index ? "Loading" : `Slot ${index + 1}`}</strong>
-                  <span>{loadingSlot === index ? "Fetching stream..." : "Pick a live event"}</span>
+                  <span>{loadingSlot === index ? "Fetching source..." : "Pick a live event"}</span>
                 </div>
               )}
             </div>

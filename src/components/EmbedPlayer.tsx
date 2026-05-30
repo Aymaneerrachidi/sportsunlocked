@@ -98,7 +98,7 @@ export default function EmbedPlayer({ embedUrls, streamLabels, isLive, isPremium
             borderRadius: "var(--radius-lg)", textAlign: "center",
           }}>
             <p style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 20, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text)", marginBottom: 6 }}>Go Premium</p>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>Skip all ads and enjoy uninterrupted sports streaming.</p>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>Premium display options can reduce interruptions where supported.</p>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
             <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
@@ -139,7 +139,7 @@ export default function EmbedPlayer({ embedUrls, streamLabels, isLive, isPremium
       <div style={{ width: "100%", aspectRatio: "16/9", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 24 }}>
         <p style={{ fontSize: 36 }}>{isFinished ? "🏁" : isUpcoming ? "⏱" : "📡"}</p>
         <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 14, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-muted)", textAlign: "center" }}>
-          {isFinished ? "Match finished" : isUpcoming ? "Stream not live yet" : "No stream found"}
+          {isFinished ? "Match finished" : isUpcoming ? "Source not live yet" : "No playable source found"}
         </p>
         <p style={{ fontSize: 13, color: "var(--text-dim)", textAlign: "center" }}>
           {isFinished
@@ -209,7 +209,7 @@ export default function EmbedPlayer({ embedUrls, streamLabels, isLive, isPremium
       <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10, display: "flex", alignItems: "center", gap: 5, background: "rgba(6,10,18,0.75)", borderRadius: 4, padding: "3px 8px", backdropFilter: "blur(4px)" }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: streamHealth === "ok" ? "#10B981" : streamHealth === "down" ? "#EF4444" : "#F59E0B", flexShrink: 0, animation: streamHealth === "checking" ? "live-pulse 1s infinite" : "none" }} />
         <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: streamHealth === "ok" ? "#10B981" : streamHealth === "down" ? "#EF4444" : "#F59E0B" }}>
-          {streamHealth === "ok" ? "Stream Online" : streamHealth === "down" ? "Stream Offline" : "Checking…"}
+          {streamHealth === "ok" ? "Source Online" : streamHealth === "down" ? "Source Offline" : "Checking..."}
         </span>
       </div>
 

@@ -4,6 +4,7 @@ const LINKS = [
   { href: "/guides", label: "Guides" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact" },
+  { href: "/editorial-policy", label: "Editorial Policy" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms" },
 ];
@@ -13,7 +14,7 @@ export default function Footer() {
     <footer className="site-footer">
       <div>
         <strong>SportUnlocked</strong>
-        <span>Sports schedules, live event discovery, guides, and viewing tools in one place.</span>
+        <span>Sports schedules, event discovery, original guides, and viewing tools in one place.</span>
       </div>
       <nav aria-label="Footer navigation">
         {LINKS.map(link => (
