@@ -188,7 +188,6 @@ export default function EmbedPlayer({ embedUrls, streamLabels, isLive, isPremium
         style={{ width: "100%", height: "100%", border: "none" }}
         allowFullScreen
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
         scrolling="no"
         referrerPolicy="no-referrer"
       />

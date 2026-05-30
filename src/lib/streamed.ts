@@ -75,6 +75,18 @@ export function decodeSources(s: string): { source: string; id: string }[] {
   });
 }
 
+const STREAM_SOURCE_PRIORITY: Record<string, number> = {
+  alpha: 0,
+  bravo: 1,
+  charlie: 2,
+  delta: 3,
+  echo: 4,
+};
+
+export function streamSourceRank(source: string): number {
+  return STREAM_SOURCE_PRIORITY[source.toLowerCase()] ?? 50;
+}
+
 async function streamedFetch<T>(path: string, revalidate: number | false): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...(revalidate === false ? { cache: "no-store" as const } : { next: { revalidate } }),

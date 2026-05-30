@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { decodeSources, StreamedStream } from "@/lib/streamed";
+import { decodeSources, streamSourceRank, StreamedStream } from "@/lib/streamed";
 
 interface LoadedStream extends StreamedStream {
   sourceName: string;
@@ -49,6 +49,8 @@ export default function WatchPage() {
     }
 
     results.sort((a, b) => {
+      const sourceDiff = streamSourceRank(a.sourceName) - streamSourceRank(b.sourceName);
+      if (sourceDiff !== 0) return sourceDiff;
       if (a.hd && !b.hd) return -1;
       if (!a.hd && b.hd) return 1;
       return a.streamNo - b.streamNo;
@@ -99,7 +101,6 @@ export default function WatchPage() {
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
             allowFullScreen
             allow="autoplay; fullscreen; encrypted-media"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           />
         )}
       </div>

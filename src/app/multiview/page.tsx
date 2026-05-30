@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { StreamedMatch, StreamedStream, encodeSources, matchThumbnailUrl } from "@/lib/streamed";
+import { StreamedMatch, StreamedStream, encodeSources, matchThumbnailUrl, streamSourceRank } from "@/lib/streamed";
 import { sportColor } from "@/lib/sportTheme";
 
 type LoadedStream = StreamedStream & {
@@ -37,6 +37,8 @@ function mergeMatches(live: StreamedMatch[], today: StreamedMatch[]) {
 
 function sortStreams(streams: LoadedStream[]) {
   return streams.sort((a, b) => {
+    const sourceDiff = streamSourceRank(a.sourceName) - streamSourceRank(b.sourceName);
+    if (sourceDiff !== 0) return sourceDiff;
     if (a.hd && !b.hd) return -1;
     if (!a.hd && b.hd) return 1;
     return a.streamNo - b.streamNo;
@@ -156,7 +158,6 @@ export default function MultiViewPage() {
                     src={slot.active.embedUrl}
                     allow="autoplay; fullscreen; encrypted-media"
                     allowFullScreen
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   />
                   <div className="multiview-slot-label">
                     <strong>S{index + 1}</strong>
