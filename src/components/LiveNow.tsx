@@ -1,30 +1,52 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { StreamedMatch, badgeUrl, encodeSources } from "@/lib/streamed";
+import { StreamedMatch, badgeUrl, encodeSources, matchThumbnailUrl } from "@/lib/streamed";
 import SportIcon from "@/components/SportIcon";
 import { sportColor } from "@/lib/sportTheme";
+
+const LIVE_POLL_MS = 15_000;
+const LIVE_PRE_ROLL_MS = 2 * 60_000;
+const LIVE_FALLBACK_WINDOW_MS = 4 * 60 * 60_000;
+
+function mergeLiveWithDueFixtures(live: StreamedMatch[], today: StreamedMatch[]) {
+  const now = Date.now();
+  const seen = new Set(live.map(match => match.id));
+  const dueFixtures = today.filter(match => {
+    if (seen.has(match.id) || match.sources.length === 0) return false;
+    return match.date <= now + LIVE_PRE_ROLL_MS && match.date >= now - LIVE_FALLBACK_WINDOW_MS;
+  });
+
+  return [...live, ...dueFixtures].sort((a, b) => a.date - b.date);
+}
 
 export default function LiveNow() {
   const [events, setEvents] = useState<StreamedMatch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [countdown, setCountdown] = useState(30);
+  const [countdown, setCountdown] = useState(LIVE_POLL_MS / 1000);
 
   const fetchLive = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/matches/live?t=${Date.now()}`);
-      const data: StreamedMatch[] = await res.json();
-      setEvents(Array.isArray(data) ? data : []);
+      const [liveResult, todayResult] = await Promise.allSettled([
+        fetch(`/api/matches/live?t=${Date.now()}`, { cache: "no-store" }).then(res => res.json() as Promise<StreamedMatch[]>),
+        fetch(`/api/matches/all-today?t=${Date.now()}`, { cache: "no-store" }).then(res => res.json() as Promise<StreamedMatch[]>),
+      ]);
+      const live = liveResult.status === "fulfilled" && Array.isArray(liveResult.value) ? liveResult.value : [];
+      const today = todayResult.status === "fulfilled" && Array.isArray(todayResult.value) ? todayResult.value : [];
+      setEvents(mergeLiveWithDueFixtures(live, today));
     } catch { /* keep old data */ }
     setLoading(false);
-    setCountdown(30);
+    setCountdown(LIVE_POLL_MS / 1000);
   }, []);
 
   useEffect(() => {
-    fetchLive();
-    const interval = setInterval(fetchLive, 30_000);
-    return () => clearInterval(interval);
+    const initial = setTimeout(fetchLive, 0);
+    const interval = setInterval(fetchLive, LIVE_POLL_MS);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
   }, [fetchLive]);
 
   useEffect(() => {
@@ -72,6 +94,7 @@ export default function LiveNow() {
             const teamB = event.teams?.away?.name ?? event.title.split(" vs ")[1] ?? "";
             const badgeA = event.teams?.home?.badge;
             const badgeB = event.teams?.away?.badge;
+            const thumbnail = matchThumbnailUrl(event);
             const href = `/watch/${event.id}?s=${encodeSources(event.sources)}`;
 
             return (
@@ -89,9 +112,16 @@ export default function LiveNow() {
                 >
                   <div style={{ height: 2, background: "var(--live)" }} />
                   <div style={{ height: 70, background: "var(--surface)", position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                    {badgeA && <img src={badgeUrl(badgeA)} alt={teamA} width={36} height={36} style={{ objectFit: "contain" }} />}
-                    {badgeB && <img src={badgeUrl(badgeB)} alt={teamB} width={36} height={36} style={{ objectFit: "contain" }} />}
-                    {!badgeA && !badgeB && <SportIcon sport={event.category} size={28} color={color} muted />}
+                    <img
+                      src={thumbnail}
+                      alt=""
+                      loading="lazy"
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.42 }}
+                    />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(6,10,18,0.82), rgba(6,10,18,0.32), rgba(6,10,18,0.82))" }} />
+                    {badgeA && <img src={badgeUrl(badgeA)} alt={teamA} width={36} height={36} style={{ objectFit: "contain", position: "relative", zIndex: 1 }} />}
+                    {badgeB && <img src={badgeUrl(badgeB)} alt={teamB} width={36} height={36} style={{ objectFit: "contain", position: "relative", zIndex: 1 }} />}
+                    {!badgeA && !badgeB && <div style={{ position: "relative", zIndex: 1 }}><SportIcon sport={event.category} size={28} color={color} muted /></div>}
                     <div style={{ position: "absolute", top: 6, left: 8, background: "rgba(6,10,18,0.72)", border: `1px solid ${color}55`, borderRadius: "var(--radius-sm)", padding: 4 }}>
                       <SportIcon sport={event.category} size={14} color={color} />
                     </div>

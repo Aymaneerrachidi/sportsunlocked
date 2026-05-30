@@ -1,12 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/mark-live",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/sync",
-      "schedule": "*/30 * * * *"
-    }
-  ]
+  "framework": "nextjs"
 }

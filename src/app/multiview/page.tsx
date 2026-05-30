@@ -1,138 +1,216 @@
 "use client";
-import { useState, useEffect } from "react";
-import EmbedPlayer from "@/components/EmbedPlayer";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { StreamedMatch, StreamedStream, encodeSources, matchThumbnailUrl } from "@/lib/streamed";
+import { sportColor } from "@/lib/sportTheme";
 
-interface Match {
-  id: string;
-  title: string;
-  teamA: string;
-  teamB: string;
-  sport: string;
-  isLive: boolean;
-  embedUrl?: string | null;
+type LoadedStream = StreamedStream & {
+  sourceName: string;
+};
+
+type Slot = {
+  match: StreamedMatch;
+  streams: LoadedStream[];
+  active: LoadedStream;
+};
+
+const SLOT_COUNT = 4;
+const LIVE_PRE_ROLL_MS = 2 * 60_000;
+const LIVE_FALLBACK_WINDOW_MS = 4 * 60 * 60_000;
+
+function isWatchable(match: StreamedMatch) {
+  const now = Date.now();
+  return match.sources.length > 0 && match.date <= now + LIVE_PRE_ROLL_MS && match.date >= now - LIVE_FALLBACK_WINDOW_MS;
+}
+
+function mergeMatches(live: StreamedMatch[], today: StreamedMatch[]) {
+  const byId = new Map<string, StreamedMatch>();
+  for (const match of [...today.filter(isWatchable), ...live]) {
+    if (match.sources.length > 0) byId.set(match.id, match);
+  }
+  return [...byId.values()].sort((a, b) => {
+    if (a.popular && !b.popular) return -1;
+    if (!a.popular && b.popular) return 1;
+    return a.date - b.date;
+  });
+}
+
+function sortStreams(streams: LoadedStream[]) {
+  return streams.sort((a, b) => {
+    if (a.hd && !b.hd) return -1;
+    if (!a.hd && b.hd) return 1;
+    return a.streamNo - b.streamNo;
+  });
+}
+
+async function loadMatchStreams(match: StreamedMatch) {
+  const settled = await Promise.allSettled(
+    match.sources.map(async ({ source, id }) => {
+      const res = await fetch(`/api/stream/${source}/${id}`);
+      if (!res.ok) return [];
+      const streams = await res.json() as StreamedStream[];
+      return streams.map(stream => ({ ...stream, sourceName: source }));
+    })
+  );
+
+  return sortStreams(settled.flatMap(result => result.status === "fulfilled" ? result.value : []));
 }
 
 export default function MultiViewPage() {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [selected, setSelected] = useState<(Match | null)[]>([null, null, null, null]);
+  const [matches, setMatches] = useState<StreamedMatch[]>([]);
+  const [slots, setSlots] = useState<(Slot | null)[]>(Array(SLOT_COUNT).fill(null));
   const [layout, setLayout] = useState<2 | 4>(2);
+  const [activeSlot, setActiveSlot] = useState(0);
+  const [loadingMatches, setLoadingMatches] = useState(true);
+  const [loadingSlot, setLoadingSlot] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/api/matches")
-      .then(r => r.json())
-      .then((data: Match[]) => setMatches(data.filter(m => m.embedUrl || m.isLive)));
+  const visibleSlots = useMemo(() => slots.slice(0, layout), [slots, layout]);
+
+  const loadMatches = useCallback(async () => {
+    setLoadingMatches(true);
+    setError(null);
+
+    try {
+      const [liveResult, todayResult] = await Promise.allSettled([
+        fetch(`/api/matches/live?t=${Date.now()}`, { cache: "no-store" }).then(res => res.json() as Promise<StreamedMatch[]>),
+        fetch(`/api/matches/all-today?t=${Date.now()}`, { cache: "no-store" }).then(res => res.json() as Promise<StreamedMatch[]>),
+      ]);
+
+      const live = liveResult.status === "fulfilled" && Array.isArray(liveResult.value) ? liveResult.value : [];
+      const today = todayResult.status === "fulfilled" && Array.isArray(todayResult.value) ? todayResult.value : [];
+      setMatches(mergeMatches(live, today));
+    } catch {
+      setError("Could not load Streamed matches.");
+    } finally {
+      setLoadingMatches(false);
+    }
   }, []);
 
-  const assign = (slot: number, match: Match | null) => {
-    setSelected(prev => { const next = [...prev]; next[slot] = match; return next; });
+  useEffect(() => {
+    const timeout = setTimeout(loadMatches, 0);
+    const interval = setInterval(loadMatches, 30_000);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [loadMatches]);
+
+  const assign = async (slotIndex: number, match: StreamedMatch) => {
+    setActiveSlot(slotIndex);
+    setLoadingSlot(slotIndex);
+    setError(null);
+
+    const streams = await loadMatchStreams(match);
+    if (streams.length === 0) {
+      setError("No streams available for that match yet.");
+      setLoadingSlot(null);
+      return;
+    }
+
+    setSlots(prev => {
+      const next = [...prev];
+      next[slotIndex] = { match, streams, active: streams[0] };
+      return next;
+    });
+    setLoadingSlot(null);
   };
 
-  const slots = selected.slice(0, layout);
+  const setActiveStream = (slotIndex: number, stream: LoadedStream) => {
+    setSlots(prev => {
+      const next = [...prev];
+      const slot = next[slotIndex];
+      if (slot) next[slotIndex] = { ...slot, active: stream };
+      return next;
+    });
+  };
 
   return (
-    <div style={{ maxWidth: 1600, margin: "0 auto", padding: "20px 16px 40px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 3, height: 22, background: "var(--accent)", borderRadius: 2 }} />
-          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: 22, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text)" }}>Multi-View</h1>
+    <main className="multiview-page">
+      <section className="multiview-header">
+        <div>
+          <p className="schedule-eyebrow">Multi Stream</p>
+          <h1 className="schedule-title">Multi-View</h1>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {([2, 4] as const).map(n => (
-            <button key={n} onClick={() => setLayout(n)} style={{
-              fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11,
-              letterSpacing: "0.08em", textTransform: "uppercase",
-              padding: "6px 14px", borderRadius: "var(--radius-sm)",
-              border: `1px solid ${layout === n ? "var(--accent)" : "var(--border)"}`,
-              background: layout === n ? "var(--accent-dim)" : "transparent",
-              color: layout === n ? "var(--accent)" : "var(--text-muted)",
-              cursor: "pointer",
-            }}>
-              {n === 2 ? "2 Streams" : "4 Streams"}
+        <div className="multiview-actions">
+          {([2, 4] as const).map(count => (
+            <button key={count} className={layout === count ? "active" : ""} onClick={() => setLayout(count)}>
+              {count} Streams
             </button>
           ))}
-          <Link href="/" style={{
-            fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11,
-            letterSpacing: "0.08em", textTransform: "uppercase",
-            padding: "6px 14px", borderRadius: "var(--radius-sm)",
-            border: "1px solid var(--border)", color: "var(--text-muted)",
-            textDecoration: "none",
-          }}>← Back</Link>
+          <button onClick={loadMatches}>Refresh</button>
+          <Link href="/">Back</Link>
         </div>
-      </div>
+      </section>
 
-      {/* Player grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: layout === 2 ? "1fr 1fr" : "1fr 1fr",
-        gridTemplateRows: layout === 4 ? "1fr 1fr" : "1fr",
-        gap: 8,
-        marginBottom: 20,
-      }}>
-        {slots.map((match, i) => (
-          <div key={i} style={{ position: "relative" }}>
-            {match?.embedUrl ? (
-              <EmbedPlayer embedUrls={[match.embedUrl]} isLive={match.isLive} isPremium={true} />
-            ) : (
-              <div style={{
-                aspectRatio: "16/9", background: "var(--surface)",
-                border: "2px dashed var(--border)", borderRadius: "var(--radius-lg)",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
-              }}>
-                <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-                  Slot {i + 1}
-                </p>
-                <p style={{ fontSize: 12, color: "var(--text-dim)" }}>Select a match below</p>
-              </div>
-            )}
-            {/* Slot label */}
-            <div style={{ position: "absolute", top: 8, left: 8, zIndex: 20, display: "flex", alignItems: "center", gap: 6, background: "rgba(6,10,18,0.8)", borderRadius: 4, padding: "3px 8px", backdropFilter: "blur(4px)" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 10, letterSpacing: "0.1em", color: "var(--accent)" }}>S{i + 1}</span>
-              {match && <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 10, color: "var(--text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{match.title}</span>}
-            </div>
-          </div>
-        ))}
-      </div>
+      {error && <div className="multiview-error">{error}</div>}
 
-      {/* Match picker */}
-      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-xl)", overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
-          <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-muted)" }}>
-            Select streams — click a slot number then pick a match
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
-          {matches.length === 0 ? (
-            <p style={{ padding: "20px 16px", fontSize: 13, color: "var(--text-dim)" }}>No streamable matches found. Sync live events from admin first.</p>
-          ) : (
-            matches.map(m => (
-              <div key={m.id} style={{ flexShrink: 0, borderRight: "1px solid var(--border)", padding: "12px 14px", minWidth: 180 }}>
-                <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 12, letterSpacing: "0.02em", textTransform: "uppercase", color: "var(--text)", marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</p>
-                {m.isLive && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
-                    <span className="live-dot" style={{ width: 5, height: 5 }} />
-                    <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9, letterSpacing: "0.1em", color: "var(--live)" }}>LIVE</span>
+      <section className={layout === 2 ? "multiview-grid two" : "multiview-grid four"}>
+        {visibleSlots.map((slot, index) => (
+          <div key={index} className={activeSlot === index ? "multiview-slot active" : "multiview-slot"} onClick={() => setActiveSlot(index)}>
+            {slot ? (
+              <>
+                <iframe
+                  key={slot.active.embedUrl}
+                  src={slot.active.embedUrl}
+                  allow="autoplay; fullscreen; encrypted-media"
+                  allowFullScreen
+                />
+                <div className="multiview-slot-label">
+                  <strong>S{index + 1}</strong>
+                  <span>{slot.match.title}</span>
+                </div>
+                {slot.streams.length > 1 && (
+                  <div className="multiview-streams">
+                    {slot.streams.slice(0, 6).map(stream => (
+                      <button
+                        key={`${stream.sourceName}-${stream.id}-${stream.embedUrl}`}
+                        className={stream.embedUrl === slot.active.embedUrl ? "active" : ""}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setActiveStream(index, stream);
+                        }}
+                      >
+                        {stream.sourceName} {stream.streamNo}
+                      </button>
+                    ))}
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {slots.map((_, i) => (
-                    <button key={i} onClick={() => assign(i, m)} style={{
-                      fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 9,
-                      letterSpacing: "0.08em", textTransform: "uppercase",
-                      padding: "3px 8px", borderRadius: 3,
-                      border: "1px solid var(--border)",
-                      background: selected[i]?.id === m.id ? "var(--accent)" : "transparent",
-                      color: selected[i]?.id === m.id ? "#060A12" : "var(--text-muted)",
-                      cursor: "pointer",
-                    }}>S{i + 1}</button>
-                  ))}
-                </div>
+              </>
+            ) : (
+              <div className="multiview-empty">
+                <strong>{loadingSlot === index ? "Loading" : `Slot ${index + 1}`}</strong>
+                <span>{loadingSlot === index ? "Fetching stream..." : "Pick a live event below"}</span>
               </div>
-            ))
+            )}
+          </div>
+        ))}
+      </section>
+
+      <section className="multiview-picker">
+        <div className="multiview-picker-head">
+          <span>{loadingMatches ? "Loading events" : `${matches.length} watchable events`}</span>
+          <span>Assigning to S{activeSlot + 1}</span>
+        </div>
+        <div className="multiview-match-list">
+          {matches.length === 0 && !loadingMatches ? (
+            <p className="multiview-none">No live or starting-soon Streamed events found.</p>
+          ) : (
+            matches.map(match => {
+              const color = sportColor(match.category);
+              return (
+                <button key={match.id} className="multiview-match" onClick={() => assign(activeSlot, match)} style={{ ["--event-color" as string]: color }}>
+                  <img src={matchThumbnailUrl(match)} alt="" loading="lazy" />
+                  <span>
+                    <strong>{match.title}</strong>
+                    <em>{match.category} | {match.sources.length} source{match.sources.length === 1 ? "" : "s"}</em>
+                  </span>
+                </button>
+              );
+            })
           )}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

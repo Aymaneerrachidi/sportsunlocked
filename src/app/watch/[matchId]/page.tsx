@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { decodeSources, StreamedStream } from "@/lib/streamed";
 
 interface LoadedStream extends StreamedStream {
@@ -8,10 +9,9 @@ interface LoadedStream extends StreamedStream {
 }
 
 export default function WatchPage() {
-  const params = useParams();
   const searchParams = useSearchParams();
-  const matchId = params.matchId as string;
-  const sources = decodeSources(searchParams.get("s") ?? "");
+  const sourceParam = searchParams.get("s") ?? "";
+  const sources = useMemo(() => decodeSources(sourceParam), [sourceParam]);
 
   const [streams, setStreams] = useState<LoadedStream[]>([]);
   const [active, setActive] = useState<LoadedStream | null>(null);
@@ -24,6 +24,7 @@ export default function WatchPage() {
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
 
@@ -35,7 +36,9 @@ export default function WatchPage() {
           if (!res.ok) return;
           const data: StreamedStream[] = await res.json();
           results.push(...data.map(s => ({ ...s, sourceName: source })));
-        } catch { /* skip failed source */ }
+        } catch {
+          // skip failed source
+        }
       })
     );
 
@@ -45,7 +48,6 @@ export default function WatchPage() {
       return;
     }
 
-    // HD first, then by streamNo
     results.sort((a, b) => {
       if (a.hd && !b.hd) return -1;
       if (!a.hd && b.hd) return 1;
@@ -55,24 +57,32 @@ export default function WatchPage() {
     setStreams(results);
     setActive(results[0]);
     setLoading(false);
-  }, [matchId, searchParams.get("s")]);
+  }, [sources]);
 
-  useEffect(() => { loadStreams(); }, [loadStreams]);
+  useEffect(() => {
+    const timeout = setTimeout(loadStreams, 0);
+    return () => clearTimeout(timeout);
+  }, [loadStreams]);
 
   return (
     <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px" }}>
-      {/* Player */}
       <div style={{
-        position: "relative", width: "100%", paddingBottom: "56.25%",
-        background: "#000", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 16,
+        position: "relative",
+        width: "100%",
+        paddingBottom: "56.25%",
+        background: "#000",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+        marginBottom: 16,
       }}>
         {loading && (
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              Loading stream…
+              Loading stream...
             </span>
           </div>
         )}
+
         {!loading && error && (
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
             <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--live)", letterSpacing: "0.06em" }}>{error}</span>
@@ -81,9 +91,10 @@ export default function WatchPage() {
             </button>
           </div>
         )}
+
         {active && (
           <iframe
-            key={active.id}
+            key={`${active.sourceName}-${active.id}-${active.embedUrl}`}
             src={active.embedUrl}
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
             allowFullScreen
@@ -92,33 +103,36 @@ export default function WatchPage() {
         )}
       </div>
 
-      {/* Stream selector */}
       {streams.length > 1 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
           {streams.map(stream => (
             <button
-              key={stream.id}
+              key={`${stream.sourceName}-${stream.id}-${stream.embedUrl}`}
               onClick={() => setActive(stream)}
               style={{
-                fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 11,
-                letterSpacing: "0.08em", textTransform: "uppercase",
-                padding: "6px 14px", borderRadius: "var(--radius-sm)",
+                fontFamily: "var(--font-display)",
+                fontWeight: 700,
+                fontSize: 11,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "6px 14px",
+                borderRadius: "var(--radius-sm)",
                 border: "1px solid var(--border)",
-                background: active?.id === stream.id ? "var(--accent)" : "var(--surface)",
-                color: active?.id === stream.id ? "#060A12" : "var(--text-muted)",
-                cursor: "pointer", transition: "background 0.15s, color 0.15s",
+                background: active?.embedUrl === stream.embedUrl ? "var(--accent)" : "var(--surface)",
+                color: active?.embedUrl === stream.embedUrl ? "#060A12" : "var(--text-muted)",
+                cursor: "pointer",
+                transition: "background 0.15s, color 0.15s",
               }}
             >
-              {stream.sourceName} {stream.streamNo} · {stream.hd ? "HD" : "SD"}{stream.language !== "English" ? ` · ${stream.language}` : ""}
+              {stream.sourceName} {stream.streamNo} - {stream.hd ? "HD" : "SD"}{stream.language !== "English" ? ` - ${stream.language}` : ""}
             </button>
           ))}
         </div>
       )}
 
-      {/* Back link */}
-      <a href="/" style={{ fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", textDecoration: "none" }}>
-        ← Back to matches
-      </a>
+      <Link href="/" style={{ fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", textDecoration: "none" }}>
+        Back to matches
+      </Link>
     </div>
   );
 }

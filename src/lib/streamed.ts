@@ -8,8 +8,8 @@ export interface StreamedMatch {
   poster?: string;
   popular: boolean;
   teams?: {
-    home?: { name: string; badge: string };
-    away?: { name: string; badge: string };
+    home?: { name: string; badge?: string };
+    away?: { name: string; badge?: string };
   };
   sources: { source: string; id: string }[];
 }
@@ -33,7 +33,33 @@ export function badgeUrl(badge: string): string {
 }
 
 export function posterUrl(poster: string): string {
-  return `${BASE}/api/images/proxy/${poster}.webp`;
+  const path = poster.startsWith("/") ? poster : `/api/images/proxy/${poster}`;
+  return `${BASE}${path}${path.endsWith(".webp") ? "" : ".webp"}`;
+}
+
+export function matchPosterUrl(match: StreamedMatch): string | undefined {
+  if (match.poster) return posterUrl(match.poster);
+
+  const homeBadge = match.teams?.home?.badge;
+  const awayBadge = match.teams?.away?.badge;
+  if (homeBadge && awayBadge) {
+    return `${BASE}/api/images/poster/${homeBadge}/${awayBadge}.webp`;
+  }
+
+  return undefined;
+}
+
+export function matchThumbnailUrl(match: StreamedMatch): string {
+  const params = new URLSearchParams();
+  params.set("v", "2");
+  if (match.poster) params.set("poster", match.poster);
+  if (match.teams?.home?.badge) params.set("home", match.teams.home.badge);
+  if (match.teams?.away?.badge) params.set("away", match.teams.away.badge);
+  if (match.teams?.home?.name) params.set("homeName", match.teams.home.name);
+  if (match.teams?.away?.name) params.set("awayName", match.teams.away.name);
+  params.set("sport", match.category);
+  params.set("title", match.title);
+  return `/api/thumbnail?${params.toString()}`;
 }
 
 export function encodeSources(sources: { source: string; id: string }[]): string {
@@ -49,21 +75,25 @@ export function decodeSources(s: string): { source: string; id: string }[] {
   });
 }
 
-async function streamedFetch<T>(path: string, revalidate: number): Promise<T> {
+async function streamedFetch<T>(path: string, revalidate: number | false): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    next: { revalidate },
+    ...(revalidate === false ? { cache: "no-store" as const } : { next: { revalidate } }),
     headers: { "User-Agent": "Mozilla/5.0" },
   });
-  if (!res.ok) throw new Error(`Streamed API ${path} → ${res.status}`);
+  if (!res.ok) throw new Error(`Streamed API ${path} -> ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 export function fetchLiveMatches(): Promise<StreamedMatch[]> {
-  return streamedFetch<StreamedMatch[]>("/api/matches/live", 30);
+  return streamedFetch<StreamedMatch[]>("/api/matches/live", false);
 }
 
 export function fetchTodayMatches(): Promise<StreamedMatch[]> {
   return streamedFetch<StreamedMatch[]>("/api/matches/all-today", 120);
+}
+
+export function fetchAllMatches(): Promise<StreamedMatch[]> {
+  return streamedFetch<StreamedMatch[]>("/api/matches/all", 120);
 }
 
 export function fetchMatchesBySport(sport: string): Promise<StreamedMatch[]> {
