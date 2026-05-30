@@ -156,6 +156,7 @@ export default function MultiViewPage() {
                     src={slot.active.embedUrl}
                     allow="autoplay; fullscreen; encrypted-media"
                     allowFullScreen
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
                   />
                   <div className="multiview-slot-label">
                     <strong>S{index + 1}</strong>
