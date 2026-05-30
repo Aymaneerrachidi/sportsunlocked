@@ -145,72 +145,74 @@ export default function MultiViewPage() {
 
       {error && <div className="multiview-error">{error}</div>}
 
-      <section className={layout === 2 ? "multiview-grid two" : "multiview-grid four"}>
-        {visibleSlots.map((slot, index) => (
-          <div key={index} className={activeSlot === index ? "multiview-slot active" : "multiview-slot"} onClick={() => setActiveSlot(index)}>
-            {slot ? (
-              <>
-                <iframe
-                  key={slot.active.embedUrl}
-                  src={slot.active.embedUrl}
-                  allow="autoplay; fullscreen; encrypted-media"
-                  allowFullScreen
-                />
-                <div className="multiview-slot-label">
-                  <strong>S{index + 1}</strong>
-                  <span>{slot.match.title}</span>
-                </div>
-                {slot.streams.length > 1 && (
-                  <div className="multiview-streams">
-                    {slot.streams.slice(0, 6).map(stream => (
-                      <button
-                        key={`${stream.sourceName}-${stream.id}-${stream.embedUrl}`}
-                        className={stream.embedUrl === slot.active.embedUrl ? "active" : ""}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setActiveStream(index, stream);
-                        }}
-                      >
-                        {stream.sourceName} {stream.streamNo}
-                      </button>
-                    ))}
+      <div className="multiview-shell">
+        <section className={layout === 2 ? "multiview-grid two" : "multiview-grid four"}>
+          {visibleSlots.map((slot, index) => (
+            <div key={index} className={activeSlot === index ? "multiview-slot active" : "multiview-slot"} onClick={() => setActiveSlot(index)}>
+              {slot ? (
+                <>
+                  <iframe
+                    key={slot.active.embedUrl}
+                    src={slot.active.embedUrl}
+                    allow="autoplay; fullscreen; encrypted-media"
+                    allowFullScreen
+                  />
+                  <div className="multiview-slot-label">
+                    <strong>S{index + 1}</strong>
+                    <span>{slot.match.title}</span>
                   </div>
-                )}
-              </>
+                  {slot.streams.length > 1 && (
+                    <div className="multiview-streams">
+                      {slot.streams.slice(0, 6).map(stream => (
+                        <button
+                          key={`${stream.sourceName}-${stream.id}-${stream.embedUrl}`}
+                          className={stream.embedUrl === slot.active.embedUrl ? "active" : ""}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setActiveStream(index, stream);
+                          }}
+                        >
+                          {stream.sourceName} {stream.streamNo}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="multiview-empty">
+                  <strong>{loadingSlot === index ? "Loading" : `Slot ${index + 1}`}</strong>
+                  <span>{loadingSlot === index ? "Fetching stream..." : "Pick a live event"}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+
+        <section className="multiview-picker">
+          <div className="multiview-picker-head">
+            <span>{loadingMatches ? "Loading events" : `${matches.length} events`}</span>
+            <span>S{activeSlot + 1}</span>
+          </div>
+          <div className="multiview-match-list">
+            {matches.length === 0 && !loadingMatches ? (
+              <p className="multiview-none">No live or starting-soon Streamed events found.</p>
             ) : (
-              <div className="multiview-empty">
-                <strong>{loadingSlot === index ? "Loading" : `Slot ${index + 1}`}</strong>
-                <span>{loadingSlot === index ? "Fetching stream..." : "Pick a live event below"}</span>
-              </div>
+              matches.map(match => {
+                const color = sportColor(match.category);
+                return (
+                  <button key={match.id} className="multiview-match" onClick={() => assign(activeSlot, match)} style={{ ["--event-color" as string]: color }}>
+                    <img src={matchThumbnailUrl(match)} alt="" loading="lazy" />
+                    <span>
+                      <strong>{match.title}</strong>
+                      <em>{match.category} | {match.sources.length} source{match.sources.length === 1 ? "" : "s"}</em>
+                    </span>
+                  </button>
+                );
+              })
             )}
           </div>
-        ))}
-      </section>
-
-      <section className="multiview-picker">
-        <div className="multiview-picker-head">
-          <span>{loadingMatches ? "Loading events" : `${matches.length} watchable events`}</span>
-          <span>Assigning to S{activeSlot + 1}</span>
-        </div>
-        <div className="multiview-match-list">
-          {matches.length === 0 && !loadingMatches ? (
-            <p className="multiview-none">No live or starting-soon Streamed events found.</p>
-          ) : (
-            matches.map(match => {
-              const color = sportColor(match.category);
-              return (
-                <button key={match.id} className="multiview-match" onClick={() => assign(activeSlot, match)} style={{ ["--event-color" as string]: color }}>
-                  <img src={matchThumbnailUrl(match)} alt="" loading="lazy" />
-                  <span>
-                    <strong>{match.title}</strong>
-                    <em>{match.category} | {match.sources.length} source{match.sources.length === 1 ? "" : "s"}</em>
-                  </span>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

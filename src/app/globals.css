@@ -428,9 +428,9 @@ body::after {
 }
 
 .multiview-page {
-  width: min(1560px, calc(100% - 28px));
+  width: min(1500px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 22px 0 48px;
+  padding: 18px 0 36px;
 }
 
 .multiview-header {
@@ -439,6 +439,10 @@ body::after {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.multiview-header .schedule-title {
+  font-size: 30px;
 }
 
 .multiview-actions {
@@ -483,10 +487,16 @@ body::after {
   font-weight: 600;
 }
 
+.multiview-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 12px;
+  align-items: start;
+}
+
 .multiview-grid {
   display: grid;
   gap: 8px;
-  margin-bottom: 18px;
 }
 
 .multiview-grid.two {
@@ -502,7 +512,7 @@ body::after {
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: #000;
   cursor: pointer;
 }
@@ -554,7 +564,7 @@ body::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: calc(100% - 16px);
+  max-width: min(420px, calc(100% - 16px));
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   background: rgba(6, 10, 18, 0.82);
@@ -608,8 +618,13 @@ body::after {
 .multiview-picker {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--card);
+  position: sticky;
+  top: 82px;
+  max-height: calc(100vh - 104px);
+  display: flex;
+  flex-direction: column;
 }
 
 .multiview-picker-head {
@@ -627,19 +642,20 @@ body::after {
 }
 
 .multiview-match-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1px;
   background: var(--border);
+  overflow-y: auto;
 }
 
 .multiview-match {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 86px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  min-height: 68px;
-  padding: 9px;
+  min-height: 72px;
+  padding: 8px 10px;
   border: 0;
   border-left: 3px solid var(--event-color, var(--accent));
   background: var(--card);
@@ -653,7 +669,7 @@ body::after {
 }
 
 .multiview-match img {
-  width: 68px;
+  width: 82px;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
   object-fit: cover;
@@ -706,8 +722,21 @@ body::after {
     justify-content: flex-start;
   }
 
+  .multiview-shell {
+    grid-template-columns: 1fr;
+  }
+
   .multiview-grid.two,
   .multiview-grid.four {
     grid-template-columns: 1fr;
+  }
+
+  .multiview-picker {
+    position: static;
+    max-height: none;
+  }
+
+  .multiview-match-list {
+    max-height: 420px;
   }
 }
